@@ -187,10 +187,9 @@ class NeighborSearch
 
   /**
    * Set the reference set to a new reference set, and build a tree if
-   * necessary. The dataset is copied by default, but the copy can be avoided by
-   * transferring the ownership of the dataset using std::move().  This method
-   * is called 'Train()' in order to match the rest of the mlpack abstractions,
+   * necessary. This method is called 'Train()' in order to match the rest of the mlpack abstractions,
    * even though calling this "training" is maybe a bit of a stretch.
+   * 
    *
    * @param referenceSet New set of reference data.
    */
@@ -273,6 +272,26 @@ class NeighborSearch
               arma::Mat<size_t>& neighbors,
               arma::mat& distances);
 
+  /**
+   * Search for the nearest neighbors of every point in the reference set.  This
+   * is basically equivalent to calling any other overload of Search() with the
+   * reference set as the query set; so, this lets you do
+   * all-k-nearest-neighbors search.  The results are stored in the given
+   * matrices.  The matrices will be set to the size of n columns by k rows,
+   * where n is the number of points in the query dataset and k is the number of
+   * neighbors being searched for.
+   *
+   * @param k Number of neighbors to search for.
+   * @param neighbors Matrix storing lists of neighbors for each query point.
+   * @param distances Matrix storing distances of neighbors for each query
+   *      point.
+   */
+  void Search(const MatType& labelSet,
+              int thing, 
+              const size_t k,
+              arma::Mat<size_t>& neighbors,
+              arma::mat& distances);
+  
   /**
    * Calculate the average relative error (effective error) between the
    * distances calculated and the true distances provided.  The input matrices

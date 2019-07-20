@@ -32,6 +32,14 @@ void MonoSearchVisitor::operator()(NSType *ns) const
   throw std::runtime_error("no neighbor search model initialized");
 }
 
+template<typename NSType>
+void Mono2SearchVisitor::operator()(NSType *ns) const
+{
+  if (ns)
+    return ns->Search(labelSet, 1, k, neighbors, distances);
+  throw std::runtime_error("no neighbor search model initialized");
+}
+
 //! Save parameters for bichromatic neighbor search.
 template<typename SortPolicy>
 BiSearchVisitor<SortPolicy>::BiSearchVisitor(const arma::mat& querySet,
@@ -591,6 +599,40 @@ void NSModel<SortPolicy>::Search(const size_t k,
         << std::endl;
 
   MonoSearchVisitor search(k, neighbors, distances);
+  boost::apply_visitor(search, nSearch);
+}
+
+template<typename SortPolicy>
+void NSModel<SortPolicy>::Search(arma::mat&& labelSet,
+                                 int thing,
+                                 const size_t k,
+                                 arma::Mat<size_t>& neighbors,
+                                 arma::mat& distances)
+{
+  Log::Info << "Searching for " << k << " neighbors with ";
+
+  switch (SearchMode())
+  {
+    case NAIVE_MODE:
+      Log::Info << "brute-force (naive) search..." << std::endl;
+      break;
+    case SINGLE_TREE_MODE:
+      Log::Info << "single-tree " << TreeName() << " search..." << std::endl;
+      break;
+    case DUAL_TREE_MODE:
+      Log::Info << "dual-tree " << TreeName() << " search..." << std::endl;
+      break;
+    case GREEDY_SINGLE_TREE_MODE:
+      Log::Info << "greedy single-tree " << TreeName() << " search..."
+          << std::endl;
+      break;
+  }
+
+  if (Epsilon() != 0 && SearchMode() != NAIVE_MODE)
+    Log::Info << "Maximum of " << Epsilon() * 100 << "% relative error."
+        << std::endl;
+
+  Mono2SearchVisitor search(labelSet, thing, k, neighbors, distances);
   boost::apply_visitor(search, nSearch);
 }
 

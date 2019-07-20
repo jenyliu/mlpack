@@ -70,6 +70,47 @@ class MonoSearchVisitor : public boost::static_visitor<void>
   {};
 };
 
+template<typename SortPolicy,
+         template<typename TreeMetricType,
+                  typename TreeStatType,
+                  typename TreeMatType> class TreeType>
+using NSType = NeighborSearch<SortPolicy,
+                              metric::EuclideanDistance,
+                              arma::mat,
+                              TreeType,
+                              TreeType<metric::EuclideanDistance,
+                                  NeighborSearchStat<SortPolicy>,
+                                  arma::mat>::template DualTreeTraverser>;
+class Mono2SearchVisitor : public boost::static_visitor<void>
+{
+ private:
+  const arma::mat& labelSet;
+  const int thing;
+  //! Number of neighbors to search for.
+  const size_t k;
+  //! Result matrix for neighbors.
+  arma::Mat<size_t>& neighbors;
+  //! Result matrix for distances.
+  arma::mat& distances;
+
+ public:
+  //! Perform monochromatic nearest neighbor search.
+  template<typename NSType>
+  void operator()(NSType* ns) const;
+
+  //! Construct the MonoSearchVisitor object with the given parameters.
+  Mono2SearchVisitor(const arma::mat& labelSet,
+                    const int thing,
+                    const size_t k,
+                    arma::Mat<size_t>& neighbors,
+                    arma::mat& distances) :
+      labelSet(labelSet),
+      thing(thing),
+      k(k),
+      neighbors(neighbors),
+      distances(distances)
+  {};
+};
 /**
  * BiSearchVisitor executes a bichromatic neighbor search on the given NSType.
  * We use template specialization to differentiate those tree types that
@@ -400,6 +441,13 @@ class NSModel
               arma::Mat<size_t>& neighbors,
               arma::mat& distances);
 
+  //! Perform monochromatic neighbor search.
+  void Search(arma::mat&& labelSet,
+              int thing,
+              const size_t k,
+              arma::Mat<size_t>& neighbors,
+              arma::mat& distances);
+  
   //! Return a string representation of the current tree type.
   std::string TreeName() const;
 };

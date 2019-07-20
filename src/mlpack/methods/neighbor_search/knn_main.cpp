@@ -89,7 +89,7 @@ PARAM_MODEL_OUT(KNNModel, "output_model", "If specified, the kNN model will be "
 // neighbors to search for.
 PARAM_MATRIX_IN("query", "Matrix containing query points (optional).", "q");
 PARAM_INT_IN("k", "Number of nearest neighbors to find.", "k", 0);
-
+PARAM_MATRIX_IN("label", "Matrix containing labels (optional).", "c");
 // The user may specify the type of tree to use, and a few parameters for tree
 // building.
 PARAM_STRING_IN("tree_type", "Type of tree to use: 'kd', 'vp', 'rp', 'max-rp', "
@@ -152,6 +152,7 @@ static void mlpackMain()
   ReportIgnoredParam({{ "k", false }}, "true_neighbors");
   ReportIgnoredParam({{ "k", false }}, "true_distances");
   ReportIgnoredParam({{ "k", false }}, "query");
+  ReportIgnoredParam({{ "k", false }}, "label");
 
   // Sanity check on leaf size.
   RequireParamValue<int>("leaf_size", [](int x) { return x > 0; },
@@ -291,6 +292,14 @@ static void mlpackMain()
           << queryData.n_rows << "x" << queryData.n_cols << ")." << endl;
     }
 
+    arma::mat labelData;
+    if (CLI::HasParam("label"))
+    {
+      labelData = std::move(CLI::GetParam<arma::mat>("label"));
+      Log::Info << "Loaded label data from '"
+          << CLI::GetPrintableParam<arma::mat>("label") << "' ("
+          << labelData.n_rows << "x" << labelData.n_cols << ")." << endl;
+    }
     // Sanity check on k value: must be greater than 0, must be less than or
     // equal to the number of reference points.  Since it is unsigned,
     // we only test the upper bound.
@@ -309,13 +318,16 @@ static void mlpackMain()
           << "reference points (" << knn->Dataset().n_cols << ") "
           << "if query data has not been provided." << endl;
     }
-
+    
+    
     // Now run the search.
     arma::Mat<size_t> neighbors;
     arma::mat distances;
 
     if (CLI::HasParam("query"))
       knn->Search(std::move(queryData), k, neighbors, distances);
+    else if (CLI::HasParam("label"))
+      knn->Search(std::move(labelData), 1, k, neighbors, distances);
     else
       knn->Search(k, neighbors, distances);
     Log::Info << "Search complete." << endl;

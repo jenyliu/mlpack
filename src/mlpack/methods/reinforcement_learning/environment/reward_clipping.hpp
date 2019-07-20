@@ -86,7 +86,7 @@ class RewardClipping
    */
   double Sample(const State& state,
                 const Action& action,
-                State& nextState)
+                State& nextState) const
   {
     // Get original unclipped reward from base environment.
     double unclippedReward =  environment.Sample(state, action, nextState);
@@ -102,7 +102,7 @@ class RewardClipping
    * @param action The current action.
    * @return clippedReward, Reward clipped between [minReward, maxReward].
    */
-  double Sample(const State& state, const Action& action)
+  double Sample(const State& state, const Action& action) const
   {
     State nextState;
     return Sample(state, action, nextState);

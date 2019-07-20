@@ -16,8 +16,6 @@
 #include <mlpack/methods/reinforcement_learning/environment/mountain_car.hpp>
 #include <mlpack/methods/reinforcement_learning/environment/continuous_mountain_car.hpp>
 #include <mlpack/methods/reinforcement_learning/environment/cart_pole.hpp>
-#include <mlpack/methods/reinforcement_learning/environment/multiple_pole_cart.hpp>
-#include <mlpack/methods/reinforcement_learning/environment/continuous_multiple_pole_cart.hpp>
 #include <mlpack/methods/reinforcement_learning/environment/acrobot.hpp>
 #include <mlpack/methods/reinforcement_learning/environment/pendulum.hpp>
 #include <mlpack/methods/reinforcement_learning/replay/random_replay.hpp>
@@ -37,24 +35,15 @@ BOOST_AUTO_TEST_SUITE(RLComponentsTest)
  */
 BOOST_AUTO_TEST_CASE(SimplePendulumTest)
 {
-  Pendulum task = Pendulum();
-  task.MaxSteps() = 5;
+  const Pendulum task = Pendulum();
 
   Pendulum::State state = task.InitialSample();
   Pendulum::Action action;
-  action.action = math::Random(-2.0, 2.0);
+  action.action[0] = math::Random(-2.0, 2.0);
   double reward = task.Sample(state, action);
 
   // The reward is always negative. Check if not lower than lowest possible.
   BOOST_REQUIRE(reward >= -(pow(M_PI, 2) + 6.404));
-
-  BOOST_REQUIRE(!task.IsTerminal(state));
-
-  while (!task.IsTerminal(state))
-    task.Sample(state, action, state);
-
-  // Check if the number of steps performed is the same as the maximum allowed.
-  BOOST_REQUIRE_EQUAL(task.StepsPerformed(), 5);
 
   // The action is simply the torque. Check if dimension is 1.
   BOOST_REQUIRE_EQUAL(1, action.size);
@@ -66,24 +55,15 @@ BOOST_AUTO_TEST_CASE(SimplePendulumTest)
  */
 BOOST_AUTO_TEST_CASE(SimpleContinuousMountainCarTest)
 {
-  ContinuousMountainCar task = ContinuousMountainCar();
-  task.MaxSteps() = 5;
+  const ContinuousMountainCar task = ContinuousMountainCar();
 
   ContinuousMountainCar::State state = task.InitialSample();
   ContinuousMountainCar::Action action;
-  action.action = math::Random(-1.0, 1.0);
+  action.action[0] = math::Random(-1.0, 1.0);
   double reward = task.Sample(state, action);
   // Maximum reward possible is 100.
   BOOST_REQUIRE(reward <= 100.0);
   BOOST_REQUIRE(!task.IsTerminal(state));
-
-  while (!task.IsTerminal(state))
-    task.Sample(state, action, state);
-
-  // Check if the number of steps performed is the same as the maximum allowed.
-  BOOST_REQUIRE_EQUAL(task.StepsPerformed(), 5);
-
-  // Check if the size of the action space is 1.
   BOOST_REQUIRE_EQUAL(1, action.size);
 }
 
@@ -93,8 +73,7 @@ BOOST_AUTO_TEST_CASE(SimpleContinuousMountainCarTest)
  */
 BOOST_AUTO_TEST_CASE(SimpleAcrobotTest)
 {
-  Acrobot task = Acrobot();
-  task.MaxSteps() = 5;
+  const Acrobot task = Acrobot();
 
   Acrobot::State state = task.InitialSample();
   Acrobot::Action action = Acrobot::Action::negativeTorque;
@@ -102,14 +81,6 @@ BOOST_AUTO_TEST_CASE(SimpleAcrobotTest)
 
   BOOST_REQUIRE_EQUAL(reward, -1.0);
   BOOST_REQUIRE(!task.IsTerminal(state));
-
-  while (!task.IsTerminal(state))
-    task.Sample(state, action, state);
-
-  // Check if the number of steps performed is the same as the maximum allowed.
-  BOOST_REQUIRE_EQUAL(task.StepsPerformed(), 5);
-
-  // Check if the size of the action space is 3.
   BOOST_REQUIRE_EQUAL(3, Acrobot::Action::size);
 }
 
@@ -119,8 +90,7 @@ BOOST_AUTO_TEST_CASE(SimpleAcrobotTest)
  */
 BOOST_AUTO_TEST_CASE(SimpleMountainCarTest)
 {
-  MountainCar task = MountainCar();
-  task.MaxSteps() = 5;
+  const MountainCar task = MountainCar();
 
   MountainCar::State state = task.InitialSample();
   MountainCar::Action action = MountainCar::Action::backward;
@@ -128,25 +98,16 @@ BOOST_AUTO_TEST_CASE(SimpleMountainCarTest)
 
   BOOST_REQUIRE_EQUAL(reward, -1.0);
   BOOST_REQUIRE(!task.IsTerminal(state));
-
-  while (!task.IsTerminal(state))
-    task.Sample(state, action, state);
-
-  // Check if the number of steps performed is the same as the maximum allowed.
-  BOOST_REQUIRE_EQUAL(task.StepsPerformed(), 5);
-
-  // Check if the size of the action space is 3.
   BOOST_REQUIRE_EQUAL(3, MountainCar::Action::size);
 }
 
 /**
- * Constructs a CartPole instance and check if the main routine works as
+ * Constructs a CartPole instance and check if the main rountine works as
  * it should be.
  */
 BOOST_AUTO_TEST_CASE(SimpleCartPoleTest)
 {
-  CartPole task = CartPole();
-  task.MaxSteps() = 5;
+  const CartPole task = CartPole();
 
   CartPole::State state = task.InitialSample();
   CartPole::Action action = CartPole::Action::backward;
@@ -154,70 +115,7 @@ BOOST_AUTO_TEST_CASE(SimpleCartPoleTest)
 
   BOOST_REQUIRE_EQUAL(reward, 1.0);
   BOOST_REQUIRE(!task.IsTerminal(state));
-
-  while (!task.IsTerminal(state))
-    task.Sample(state, action, state);
-
-  // Check if the number of steps performed is the same as the maximum allowed.
-  BOOST_REQUIRE_EQUAL(task.StepsPerformed(), 5);
-
   BOOST_REQUIRE_EQUAL(2, CartPole::Action::size);
-}
-
-/**
- * Constructs a MultiplePoleCart instance and check if the main routine works as
- * it should be.
- */
-BOOST_AUTO_TEST_CASE(MultiplePoleCartTest)
-{
-  arma::vec poleLengths = {1, 0.5};
-  arma::vec poleMasses = {1, 1};
-  MultiplePoleCart task = MultiplePoleCart(2, poleLengths, poleMasses);
-  task.MaxSteps() = 5;
-
-  MultiplePoleCart::State state = task.InitialSample();
-  MultiplePoleCart::Action action = MultiplePoleCart::Action::backward;
-  double reward = task.Sample(state, action);
-
-  BOOST_REQUIRE_EQUAL(reward, 1.0);
-  BOOST_REQUIRE(!task.IsTerminal(state));
-
-  while (!task.IsTerminal(state))
-    task.Sample(state, action, state);
-
-  // Check if the number of steps performed is the same as the maximum allowed.
-  BOOST_REQUIRE_EQUAL(task.StepsPerformed(), 5);
-  BOOST_REQUIRE_EQUAL(2, MultiplePoleCart::Action::size);
-}
-
-/**
- * Constructs a ContinuousMultiplePoleCart instance and check if the main 
- * routine works as it should be.
- */
-BOOST_AUTO_TEST_CASE(ContinuousMultiplePoleCartTest)
-{
-  arma::arma_rng::set_seed_random();
-
-  arma::vec poleLengths = {1, 0.5};
-  arma::vec poleMasses = {1, 1};
-  ContinuousMultiplePoleCart task = ContinuousMultiplePoleCart(2, poleLengths,
-      poleMasses);
-  task.MaxSteps() = 5;
-
-  ContinuousMultiplePoleCart::State state = task.InitialSample();
-  ContinuousMultiplePoleCart::Action action;
-  action.action = math::Random(-1.0, 1.0);
-  double reward = task.Sample(state, action);
-
-  BOOST_REQUIRE_EQUAL(reward, 1.0);
-  BOOST_REQUIRE(!task.IsTerminal(state));
-
-  while (!task.IsTerminal(state))
-    task.Sample(state, action, state);
-
-  // Check if the number of steps performed is the same as the maximum allowed.
-  BOOST_REQUIRE_EQUAL(task.StepsPerformed(), 5);
-  BOOST_REQUIRE_EQUAL(1, action.size);
 }
 
 /**

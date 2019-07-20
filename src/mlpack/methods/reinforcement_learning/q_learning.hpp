@@ -16,7 +16,6 @@
 #include <mlpack/prereqs.hpp>
 
 #include "replay/random_replay.hpp"
-#include "replay/prioritized_replay.hpp"
 #include "training_config.hpp"
 
 namespace mlpack {

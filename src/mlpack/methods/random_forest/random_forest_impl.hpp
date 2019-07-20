@@ -38,14 +38,13 @@ RandomForest<
                 const size_t numTrees,
                 const size_t minimumLeafSize,
                 const double minimumGainSplit,
-                const size_t maximumDepth,
                 DimensionSelectionType dimensionSelector)
 {
   // Pass off work to the Train() method.
   data::DatasetInfo info; // Ignored.
   arma::rowvec weights; // Fake weights, not used.
   Train<false, false>(dataset, info, labels, numClasses, weights, numTrees,
-      minimumLeafSize, minimumGainSplit, maximumDepth, dimensionSelector);
+      minimumLeafSize, minimumGainSplit, dimensionSelector);
 }
 
 template<
@@ -69,14 +68,12 @@ RandomForest<
                 const size_t numTrees,
                 const size_t minimumLeafSize,
                 const double minimumGainSplit,
-                const size_t maximumDepth,
                 DimensionSelectionType dimensionSelector)
 {
   // Pass off work to the Train() method.
   arma::rowvec weights; // Fake weights, not used.
   Train<false, true>(dataset, datasetInfo, labels, numClasses, weights,
-      numTrees, minimumLeafSize, minimumGainSplit, maximumDepth,
-      dimensionSelector);
+      numTrees, minimumLeafSize, minimumGainSplit, dimensionSelector);
 }
 
 template<
@@ -100,13 +97,12 @@ RandomForest<
                 const size_t numTrees,
                 const size_t minimumLeafSize,
                 const double minimumGainSplit,
-                const size_t maximumDepth,
                 DimensionSelectionType dimensionSelector)
 {
   // Pass off work to the Train() method.
   data::DatasetInfo info; // Ignored by Train().
   Train<true, false>(dataset, info, labels, numClasses, weights, numTrees,
-      minimumLeafSize, minimumGainSplit, maximumDepth, dimensionSelector);
+      minimumLeafSize, minimumGainSplit, dimensionSelector);
 }
 
 template<
@@ -131,12 +127,11 @@ RandomForest<
                 const size_t numTrees,
                 const size_t minimumLeafSize,
                 const double minimumGainSplit,
-                const size_t maximumDepth,
                 DimensionSelectionType dimensionSelector)
 {
   // Pass off work to the Train() method.
   Train<true, true>(dataset, datasetInfo, labels, numClasses, weights, numTrees,
-      minimumLeafSize, minimumGainSplit, maximumDepth, dimensionSelector);
+      minimumLeafSize, minimumGainSplit, dimensionSelector);
 }
 
 template<
@@ -159,15 +154,13 @@ double RandomForest<
          const size_t numTrees,
          const size_t minimumLeafSize,
          const double minimumGainSplit,
-         const size_t maximumDepth,
          DimensionSelectionType dimensionSelector)
 {
   // Pass off to Train().
   data::DatasetInfo info; // Ignored by Train().
   arma::rowvec weights; // Ignored by Train().
   return Train<false, false>(dataset, info, labels, numClasses, weights,
-      numTrees, minimumLeafSize, minimumGainSplit, maximumDepth,
-      dimensionSelector);
+      numTrees, minimumLeafSize, minimumGainSplit, dimensionSelector);
 }
 
 template<
@@ -191,14 +184,12 @@ double RandomForest<
          const size_t numTrees,
          const size_t minimumLeafSize,
          const double minimumGainSplit,
-         const size_t maximumDepth,
          DimensionSelectionType dimensionSelector)
 {
   // Pass off to Train().
   arma::rowvec weights; // Ignored by Train().
   return Train<false, true>(dataset, datasetInfo, labels, numClasses, weights,
-      numTrees, minimumLeafSize, minimumGainSplit, maximumDepth,
-      dimensionSelector);
+      numTrees, minimumLeafSize, minimumGainSplit, dimensionSelector);
 }
 
 template<
@@ -222,14 +213,12 @@ double RandomForest<
          const size_t numTrees,
          const size_t minimumLeafSize,
          const double minimumGainSplit,
-         const size_t maximumDepth,
          DimensionSelectionType dimensionSelector)
 {
   // Pass off to Train().
   data::DatasetInfo info; // Ignored by Train().
   return Train<false, false>(dataset, info, labels, numClasses, weights,
-      numTrees, minimumLeafSize, minimumGainSplit, maximumDepth,
-      dimensionSelector);
+      numTrees, minimumLeafSize, minimumGainSplit, dimensionSelector);
 }
 
 template<
@@ -254,13 +243,11 @@ double RandomForest<
          const size_t numTrees,
          const size_t minimumLeafSize,
          const double minimumGainSplit,
-         const size_t maximumDepth,
          DimensionSelectionType dimensionSelector)
 {
   // Pass off to Train().
   return Train<true, true>(dataset, datasetInfo, labels, numClasses, weights,
-      numTrees, minimumLeafSize, minimumGainSplit, maximumDepth,
-      dimensionSelector);
+      numTrees, minimumLeafSize, minimumGainSplit, dimensionSelector);
 }
 
 template<
@@ -460,7 +447,6 @@ double RandomForest<
          const size_t numTrees,
          const size_t minimumLeafSize,
          const double minimumGainSplit,
-         const size_t maximumDepth,
          DimensionSelectionType& dimensionSelector)
 {
   // Train each tree individually.
@@ -486,12 +472,12 @@ double RandomForest<
       {
         avgGain += trees[i].Train(bootstrapDataset, datasetInfo,
             bootstrapLabels, numClasses, bootstrapWeights, minimumLeafSize,
-            minimumGainSplit, maximumDepth, dimensionSelector);
+            minimumGainSplit, dimensionSelector);
       }
       else
       {
         avgGain += trees[i].Train(bootstrapDataset, bootstrapLabels, numClasses,
-            bootstrapWeights, minimumLeafSize, minimumGainSplit, maximumDepth,
+            bootstrapWeights, minimumLeafSize, minimumGainSplit,
             dimensionSelector);
       }
     }
@@ -501,12 +487,12 @@ double RandomForest<
       {
         avgGain += trees[i].Train(bootstrapDataset, datasetInfo,
             bootstrapLabels, numClasses, minimumLeafSize, minimumGainSplit,
-            maximumDepth, dimensionSelector);
+            dimensionSelector);
       }
       else
       {
         avgGain += trees[i].Train(bootstrapDataset, bootstrapLabels, numClasses,
-            minimumLeafSize, minimumGainSplit, maximumDepth, dimensionSelector);
+            minimumLeafSize, minimumGainSplit, dimensionSelector);
       }
     }
     Timer::Stop("train_tree");

@@ -862,6 +862,195 @@ DualTreeTraversalType, SingleTreeTraversalType>::Search(
   }
 }
 
+template<typename SortPolicy,
+         typename MetricType,
+         typename MatType,
+         template<typename TreeMetricType,
+                  typename TreeStatType,
+                  typename TreeMatType> class TreeType,
+         template<typename> class DualTreeTraversalType,
+         template<typename> class SingleTreeTraversalType>
+void NeighborSearch<SortPolicy, MetricType, MatType, TreeType,
+DualTreeTraversalType, SingleTreeTraversalType>::Search(
+    const MatType& labelSet,
+    int thing,
+    const size_t k,
+    arma::Mat<size_t>& neighbors,
+    arma::mat& distances)
+{
+  if (k > referenceSet->n_cols)
+  {
+    std::stringstream ss;
+    ss << "Requested value of k (" << k << ") is greater than the number of "
+        << "points in the reference set (" << referenceSet->n_cols << ")";
+    throw std::invalid_argument(ss.str());
+  }
+  if (k == referenceSet->n_cols)
+  {
+    std::stringstream ss;
+    ss << "Requested value of k (" << k << ") is equal to the number of "
+        << "points in the reference set (" << referenceSet->n_cols << ") and "
+        << "no query set has been provided.";
+    throw std::invalid_argument(ss.str());
+  }
+
+  Timer::Start("computing_neighbors");
+
+  baseCases = 0;
+  scores = 0;
+
+  arma::Mat<size_t>* neighborPtr = &neighbors;
+  arma::mat* distancePtr = &distances;
+
+  if (!oldFromNewReferences.empty() &&
+      tree::TreeTraits<Tree>::RearrangesDataset)
+  {
+    // We will always need to rearrange in this case.
+    distancePtr = new arma::mat;
+    neighborPtr = new arma::Mat<size_t>;
+  }
+
+  // Initialize results.
+  neighborPtr->set_size(k, referenceSet->n_cols);
+  distancePtr->set_size(k, referenceSet->n_cols);
+
+  // Create the helper object for the traversal.
+  typedef NeighborSearchRules<SortPolicy, MetricType, Tree> RuleType;
+  RuleType rules(*referenceSet, *referenceSet, k, metric, epsilon,
+      true /* don't return the same point as nearest neighbor */);
+
+  switch (searchMode)
+  {
+    case NAIVE_MODE:
+    {
+      // The naive brute-force solution.
+      for (size_t i = 0; i < referenceSet->n_cols; ++i)
+        for (size_t j = 0; j < referenceSet->n_cols; ++j)
+          rules.BaseCase(i, j);
+
+      baseCases += referenceSet->n_cols * referenceSet->n_cols;
+      break;
+    }
+    case SINGLE_TREE_MODE:
+    {
+      // Create the traverser.
+      SingleTreeTraversalType<RuleType> traverser(rules);
+
+      // Now have it traverse for each point.
+      for (size_t i = 0; i < referenceSet->n_cols; ++i)
+        traverser.Traverse(i, *referenceTree);
+
+      scores += rules.Scores();
+      baseCases += rules.BaseCases();
+
+      Log::Info << rules.Scores() << " node combinations were scored."
+          << std::endl;
+      Log::Info << rules.BaseCases() << " base cases were calculated."
+          << std::endl;
+      break;
+    }
+    case DUAL_TREE_MODE:
+    {
+      // The dual-tree monochromatic search case may require resetting the
+      // bounds in the tree.
+      if (treeNeedsReset)
+      {
+        std::stack<Tree*> nodes;
+        nodes.push(referenceTree);
+        while (!nodes.empty())
+        {
+          Tree* node = nodes.top();
+          nodes.pop();
+
+          // Reset bounds of this node.
+          node->Stat().Reset();
+
+          // Then add the children.
+          for (size_t i = 0; i < node->NumChildren(); ++i)
+            nodes.push(&node->Child(i));
+        }
+      }
+
+      // Create the traverser.
+      DualTreeTraversalType<RuleType> traverser(rules);
+
+      if (tree::IsSpillTree<Tree>::value)
+      {
+        // For Dual Tree Search on SpillTree, the queryTree must be built with
+        // non overlapping (tau = 0).
+        Tree queryTree(*referenceSet);
+        traverser.Traverse(queryTree, *referenceTree);
+      }
+      else
+      {
+        traverser.Traverse(*referenceTree, *referenceTree);
+        // Next time we perform this search, we'll need to reset the tree.
+        treeNeedsReset = true;
+      }
+
+      scores += rules.Scores();
+      baseCases += rules.BaseCases();
+
+      Log::Info << rules.Scores() << " node combinations were scored."
+          << std::endl;
+      Log::Info << rules.BaseCases() << " base cases were calculated."
+          << std::endl;
+
+      // Next time we perform this search, we'll need to reset the tree.
+      treeNeedsReset = true;
+      break;
+    }
+    case GREEDY_SINGLE_TREE_MODE:
+    {
+      // Create the traverser.
+      tree::GreedySingleTreeTraverser<Tree, RuleType> traverser(rules);
+
+      // Set the value of minBaseCases.
+      traverser.MinBaseCases() = k;
+
+      // Now have it traverse for each point.
+      for (size_t i = 0; i < referenceSet->n_cols; ++i)
+        traverser.Traverse(i, *referenceTree);
+
+      scores += rules.Scores();
+      baseCases += rules.BaseCases();
+
+      Log::Info << rules.Scores() << " node combinations were scored."
+          << std::endl;
+      Log::Info << rules.BaseCases() << " base cases were calculated."
+          << std::endl;
+      break;
+    }
+  }
+
+  rules.GetResults(*neighborPtr, *distancePtr);
+
+  Timer::Stop("computing_neighbors");
+
+  // Do we need to map the reference indices?
+  if (!oldFromNewReferences.empty() &&
+      tree::TreeTraits<Tree>::RearrangesDataset)
+  {
+    neighbors.set_size(k, referenceSet->n_cols);
+    distances.set_size(k, referenceSet->n_cols);
+
+    for (size_t i = 0; i < distances.n_cols; ++i)
+    {
+      // Map distances (copy a column).
+      const size_t refMapping = oldFromNewReferences[i];
+      distances.col(refMapping) = distancePtr->col(i);
+
+      // Map each neighbor's index.
+      for (size_t j = 0; j < distances.n_rows; ++j)
+        neighbors(j, refMapping) = labelSet[oldFromNewReferences[(*neighborPtr)(j, i)]];
+    }
+
+    // Finished with temporary matrices.
+    delete neighborPtr;
+    delete distancePtr;
+  }
+}
+
 //! Calculate the average relative error.
 template<typename SortPolicy,
          typename MetricType,

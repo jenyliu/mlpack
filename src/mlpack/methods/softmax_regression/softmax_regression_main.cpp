@@ -200,6 +200,10 @@ void TestClassifyAcc(size_t numClasses, const Model& model)
   arma::Row<size_t> predictLabels;
   model.Classify(testData, predictLabels);
 
+  // Save predictions, if desired.
+  if (CLI::HasParam("predictions"))
+    CLI::GetParam<arma::Row<size_t>>("predictions") = std::move(predictLabels);
+
   // Calculate accuracy, if desired.
   if (CLI::HasParam("test_labels"))
   {
@@ -238,9 +242,6 @@ void TestClassifyAcc(size_t numClasses, const Model& model)
         << (totalBingo) / static_cast<double>(predictLabels.n_elem) << " ("
         << totalBingo << " of " << predictLabels.n_elem << ")." << endl;
   }
-  // Save predictions, if desired.
-  if (CLI::HasParam("predictions"))
-    CLI::GetParam<arma::Row<size_t>>("predictions") = std::move(predictLabels);
 }
 
 template<typename Model>

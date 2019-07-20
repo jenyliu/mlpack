@@ -48,7 +48,6 @@ QLearning<
   // Set up q-learning network.
   if (learningNetwork.Parameters().is_empty())
     learningNetwork.ResetParameters();
-
   this->updater.Initialize(learningNetwork.Parameters().n_rows,
       learningNetwork.Parameters().n_cols);
   targetNetwork = learningNetwork;
@@ -124,7 +123,6 @@ double QLearning<
   arma::colvec sampledRewards;
   arma::mat sampledNextStates;
   arma::icolvec isTerminal;
-
   replayMethod.Sample(sampledStates, sampledActions, sampledRewards,
       sampledNextStates, isTerminal);
 
@@ -156,23 +154,15 @@ double QLearning<
   for (size_t i = 0; i < sampledNextStates.n_cols; ++i)
   {
     if (isTerminal[i])
-    {
-      target(sampledActions(i), i) = sampledRewards(i);
-    }
+      target(sampledActions[i], i) = sampledRewards[i];
     else
-    {
-      target(sampledActions(i), i) = sampledRewards(i) + config.Discount() *
-          nextActionValues(bestActions(i), i);
-    }
+      target(sampledActions[i], i) = sampledRewards[i] + config.Discount() *
+          nextActionValues(bestActions[i], i);
   }
 
   // Learn form experience.
   arma::mat gradients;
   learningNetwork.Backward(target, gradients);
-
-  replayMethod.Update(target, sampledActions,
-      nextActionValues, gradients);
-
   updater.Update(learningNetwork.Parameters(), config.StepSize(), gradients);
 
   return reward;

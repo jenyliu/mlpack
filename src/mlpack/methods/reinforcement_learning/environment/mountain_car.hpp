@@ -43,7 +43,7 @@ class MountainCar
     /**
      * Construct a state based on the given data.
      *
-     * @param data Data for the velocity and position.
+     * @param data Data for the velocityand position.
      */
     State(const arma::colvec& data): data(data)
     { /* Nothing to do here. */ }
@@ -93,25 +93,19 @@ class MountainCar
    * @param positionGoal Final target position.
    * @param velocityMin Minimum legal velocity.
    * @param velocityMax Maximum legal velocity.
-   * @param doneReward The reward recieved by the agent on success.
-   * @param maxSteps The number of steps after which the episode
-   *    terminates. If the value is 0, there is no limit.
    */
   MountainCar(const double positionMin = -1.2,
               const double positionMax = 0.6,
               const double positionGoal = 0.5,
               const double velocityMin = -0.07,
               const double velocityMax = 0.07,
-              const double doneReward = 0,
-              const size_t maxSteps = 0) :
+              const double doneReward = 0) :
       positionMin(positionMin),
       positionMax(positionMax),
       positionGoal(positionGoal),
       velocityMin(velocityMin),
       velocityMax(velocityMax),
-      doneReward(doneReward),
-      maxSteps(maxSteps),
-      stepsPerformed(0)
+      doneReward(doneReward)
   { /* Nothing to do here */ }
 
   /**
@@ -125,11 +119,8 @@ class MountainCar
    */
   double Sample(const State& state,
                 const Action& action,
-                State& nextState)
+                State& nextState) const
   {
-    // Update the number of steps performed.
-    stepsPerformed++;
-
     // Calculate acceleration.
     int direction = action - 1;
     nextState.Velocity() = state.Velocity() + 0.001 * direction - 0.0025 *
@@ -145,16 +136,17 @@ class MountainCar
     if (nextState.Position() == positionMin && nextState.Velocity() < 0)
       nextState.Velocity() = 0.0;
 
-    // Check if the episode has terminated.
     bool done = IsTerminal(nextState);
-
-    // Do not reward the agent if time ran out.
-    if (done && maxSteps != 0 && stepsPerformed >= maxSteps)
-      return 0;
-    else if (done)
+    /**
+     * If done is true , it means that car has reached its goal.
+     * To make sure that the agent learns this, we will give some
+     * positive reward to the agent. If the agent doesn't reach the
+     * terminal state, then we will give a -1.0 reward to penalize 
+     * the agent to take that step.
+     */
+    if (done)
       return doneReward;
-
-    return -1;
+    return -1.0;
   }
 
   /**
@@ -165,7 +157,7 @@ class MountainCar
    * @param action The current action.
    * @return reward, it's always -1.0.
    */
-  double Sample(const State& state, const Action& action)
+  double Sample(const State& state, const Action& action) const
   {
     State nextState;
     return Sample(state, action, nextState);
@@ -177,44 +169,24 @@ class MountainCar
    *
    * @return Initial state for each episode.
    */
-  State InitialSample()
+  State InitialSample() const
   {
     State state;
-    stepsPerformed = 0;
     state.Velocity() = 0.0;
     state.Position() = arma::as_scalar(arma::randu(1)) * 0.2 - 0.6;
     return state;
   }
 
   /**
-   * This function checks if the car has reached the terminal state.
+   * Whether given state is a terminal state.
    *
    * @param state desired state.
    * @return true if state is a terminal state, otherwise false.
    */
   bool IsTerminal(const State& state) const
   {
-    if (maxSteps != 0 && stepsPerformed >= maxSteps)
-    {
-      Log::Info << "Episode terminated due to the maximum number of steps"
-          "being taken.";
-      return true;
-    }
-    else if (state.Position() >= positionGoal)
-    {
-      Log::Info << "Episode terminated due to agent succeeding.";
-      return true;
-    }
-    return false;
+    return state.Position() >= positionGoal;
   }
-
-  //! Get the number of steps performed.
-  size_t StepsPerformed() const { return stepsPerformed; }
-
-  //! Get the maximum number of steps allowed.
-  size_t MaxSteps() const { return maxSteps; }
-  //! Set the maximum number of steps allowed.
-  size_t& MaxSteps() { return maxSteps; }
 
  private:
   //! Locally-stored minimum legal position.
@@ -234,12 +206,6 @@ class MountainCar
 
   //! Locally-stored done reward.
   double doneReward;
-
-  //! Locally-stored maximum number of steps.
-  size_t maxSteps;
-
-  //! Locally-stored number of steps performed.
-  size_t stepsPerformed;
 };
 
 } // namespace rl
